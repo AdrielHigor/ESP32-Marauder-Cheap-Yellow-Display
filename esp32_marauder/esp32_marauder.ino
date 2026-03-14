@@ -66,6 +66,7 @@ const char *szNames[] = {"Unknown", "FT6x36", "GT911", "CST820"};
 #ifdef HAS_SCREEN
   #include "Display.h"
   #include "MenuFunctions.h"
+  #include "FaceAnimator.h"
 #endif
 
 #ifdef HAS_BUTTONS
@@ -105,6 +106,7 @@ CommandLine cli_obj;
 #ifdef HAS_SCREEN
   Display display_obj;
   MenuFunctions menu_function_obj;
+  FaceAnimator face_obj(display_obj.tft);
 #endif
 
 #ifdef HAS_SD
@@ -203,6 +205,7 @@ void setup()
     display_obj.tft.fillScreen(TFT_RED);
     Serial.println("DBG: fillScreen RED done");
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    face_obj.begin();
   #endif
 
   backlightOff();
@@ -374,6 +377,14 @@ void loop()
   cli_obj.main(currentTime);
   #ifdef HAS_SCREEN
     display_obj.main(wifi_scan_obj.currentScanMode);
+    // --- Hacker Pet face --- auto-tracks scan mode, 20 fps, non-blocking
+    {
+      FaceExpression fexpr = FACE_IDLE;
+      uint8_t mode = wifi_scan_obj.currentScanMode;
+      if (mode != 0) fexpr = FACE_ATTACK;   // any active scan/attack
+      face_obj.setExpression(fexpr);
+      face_obj.update(currentTime);
+    }
   #endif
   wifi_scan_obj.main(currentTime);
 

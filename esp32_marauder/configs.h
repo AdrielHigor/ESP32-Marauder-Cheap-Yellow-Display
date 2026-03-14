@@ -1010,8 +1010,8 @@
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_HEIGHT
       #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH / 6) // number of characters on a single line with normal font
-      
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
+
+      #define BOT_FIXED_AREA 48 // Reserved for Hacker Pet sprite (bottom-right 64x48 corner)
       #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
       #define YMAX TFT_HEIGHT // Dynamically set based on the display height
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
