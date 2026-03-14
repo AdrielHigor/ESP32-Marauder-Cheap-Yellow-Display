@@ -6,7 +6,12 @@
 #include "configs.h"
 
 #include "settings.h"
-#include "SD.h"
+#if defined(CYD_28)
+  #include "SD_MMC.h"
+  #define SD SD_MMC
+#else
+  #include "SD.h"
+#endif
 #include "Buffer.h"
 #ifdef HAS_SCREEN
   #include "Display.h"

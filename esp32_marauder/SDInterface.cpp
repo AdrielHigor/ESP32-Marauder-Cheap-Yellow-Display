@@ -1,5 +1,8 @@
 #include "SDInterface.h"
 #include "lang_var.h"
+#ifdef CYD_28
+  #include "esp_rom_gpio.h"  // esp_rom_gpio_pad_select_gpio() — releases IO_MUX JTAG function
+#endif
 
 
 bool SDInterface::initSD() {
@@ -18,74 +21,70 @@ bool SDInterface::initSD() {
       }
     #endif
 
-    pinMode(SD_CS, OUTPUT);
+    #ifndef CYD_28
+      pinMode(SD_CS, OUTPUT);
+    #endif
 
     delay(10);
+
+    // ── Mount attempt ────────────────────────────────────────────────────────
+    bool sd_mounted = false;
+
     #if defined(MARAUDER_M5STICKC)
-      /* Set up SPI SD Card using external pin header
-      StickCPlus Header - SPI SD Card Reader
-                  3v3   -   3v3
-                  GND   -   GND
-                   G0   -   CLK
-              G36/G25   -   MISO
-                  G26   -   MOSI
-                        -   CS (jumper to SD Card GND Pin)
-      */
       enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
       this->spiExt = new SPIClass();
       this->spiExt->begin(SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
-      if (!SD.begin(SD_CS, *(this->spiExt))) {
+      sd_mounted = SD.begin(SD_CS, *(this->spiExt));
+
+    #elif defined(CYD_28)
+      // ── ESP32-S3-CAM N16R8: SDMMC 1-bit. VDD always-on (no power enable). ─
+      // Pull-ups confirmed present. 3.3V always present on card.
+      //
+      // SDMMC 1-bit mode. Confirmed pin mapping (silkscreen on this board has
+      // CLK and CMD swapped vs the schematic label):
+      //   CLK = GPIO38  (labeled CMD on silkscreen)
+      //   CMD = GPIO39  (labeled CLK / MTCK on silkscreen)
+      //   D0  = GPIO40  (labeled D0  / MTDO — correct)
+      // VDD always-on (no power enable GPIO). Pull-ups present on PCB.
+      esp_rom_gpio_pad_select_gpio(38);
+      esp_rom_gpio_pad_select_gpio(39);
+      esp_rom_gpio_pad_select_gpio(40);
+      SD_MMC.setPins(38, 39, 40);  // CLK, CMD, D0
+      sd_mounted = SD_MMC.begin("/sdcard", true, false, 10000);
+
     #else
-      if (!SD.begin(SD_CS)) {
+      sd_mounted = SD.begin(SD_CS);
     #endif
+
+    // ── Common failure / success path ────────────────────────────────────────
+    if (!sd_mounted) {
       Serial.println(F("Failed to mount SD Card"));
       this->supported = false;
       return false;
     }
-    else {
-      this->supported = true;
-      this->cardType = SD.cardType();
-      //if (cardType == CARD_MMC)
-      //  Serial.println(F("SD: MMC Mounted"));
-      //else if(cardType == CARD_SD)
-      //    Serial.println(F("SD: SDSC Mounted"));
-      //else if(cardType == CARD_SDHC)
-      //    Serial.println(F("SD: SDHC Mounted"));
-      //else
-      //    Serial.println(F("SD: UNKNOWN Card Mounted"));
 
-      this->cardSizeMB = SD.cardSize() / (1024 * 1024);
-    
-      //Serial.printf("SD Card Size: %lluMB\n", this->cardSizeMB);
+    this->supported = true;
+    this->cardType   = SD.cardType();
+    this->cardSizeMB = SD.cardSize() / (1024 * 1024);
 
-      if (this->supported) {
-        const int NUM_DIGITS = log10(this->cardSizeMB) + 1;
+    if (this->supported) {
+      const int NUM_DIGITS = log10(this->cardSizeMB) + 1;
+      char sz[NUM_DIGITS + 1];
+      sz[NUM_DIGITS] = 0;
+      for (size_t i = NUM_DIGITS; i--; this->cardSizeMB /= 10)
+        sz[i] = '0' + (this->cardSizeMB % 10);
+      this->card_sz = sz;
+    }
 
-        char sz[NUM_DIGITS + 1];
+    if (!SD.exists("/SCRIPTS")) {
+      Serial.println("/SCRIPTS does not exist. Creating...");
+      SD.mkdir("/SCRIPTS");
+      Serial.println("/SCRIPTS created");
+    }
 
-        sz[NUM_DIGITS] =  0;
-        for ( size_t i = NUM_DIGITS; i--; this->cardSizeMB /= 10)
-        {
-            sz[i] = '0' + (this->cardSizeMB % 10);
-            display_string.concat((String)sz[i]);
-        }
-  
-        this->card_sz = sz;
-      }
-
-      if (!SD.exists("/SCRIPTS")) {
-        Serial.println("/SCRIPTS does not exist. Creating...");
-
-        SD.mkdir("/SCRIPTS");
-        Serial.println("/SCRIPTS created");
-      }
-
-      this->sd_files = new LinkedList<String>();
-
-      this->sd_files->add("Back");
-    
-      return true;
-  }
+    this->sd_files = new LinkedList<String>();
+    this->sd_files->add("Back");
+    return true;
 
   #else
     Serial.println("SD support disabled, skipping init");

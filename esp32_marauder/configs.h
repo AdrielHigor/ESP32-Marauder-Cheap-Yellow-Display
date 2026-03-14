@@ -695,6 +695,29 @@
         #define TFT_BL -1
         // Touch XPT2046 CS (SoftSPI on GPIO 1/2/41/42 per User_Setup.h)
         #define TOUCH_CS 1
+
+        // ── External SPI bus (shared: CC1101 + NRF24) ──────────────────────
+        // NOTE: Marauder has no native driver for these modules.
+        // These defines are reference for user-added code only.
+        // TFT uses SPI2 (MOSI=45, SCLK=3) — this is a SEPARATE SPI instance.
+        #define EXT_SCK   13
+        #define EXT_MOSI  11
+        #define EXT_MISO  12
+
+        // CC1101 (Sub-GHz transceiver)
+        #define CC1101_CS    10
+        #define CC1101_GDO0   9
+        #define CC1101_GDO2   8
+
+        // NRF24L01+ (2.4 GHz, 5V→3.3V adapter on board)
+        #define NRF24_CS    15
+        #define NRF24_CE    16
+        #define NRF24_IRQ   17
+
+        // Infrared (user-assigned — all free GPIOs)
+        #define IR_TX        4
+        #define IR_RX        5
+        // GPIO 6 and 7 remain free for future use
       #endif // CYD_28
 
       #ifdef CYD_32
@@ -1492,7 +1515,11 @@
   #if defined(USE_SD)
 
     #ifdef MARAUDER_V4
-      #define SD_CS 5
+      #ifdef CYD_28
+        #define SD_CS -1  // SD_MMC mode — no CS pin
+      #else
+        #define SD_CS 5
+      #endif
     #endif
 
     #ifdef MARAUDER_V6

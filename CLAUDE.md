@@ -29,10 +29,20 @@
 | MISO/DO  | 41   |
 | IRQ      | -1 (NC) |
 
+### MicroSD (SDMMC 1-bit — no CS pin, VDD always-on, pull-ups on PCB)
+| Signal | GPIO | Notes |
+|--------|------|-------|
+| CLK    | 38   | **silkscreen says CMD** — manufacturer label is WRONG |
+| CMD    | 39   | **silkscreen says CLK/MTCK** — manufacturer label is WRONG |
+| D0     | 40   | silkscreen correct (MTDO) |
+
+> **Warning:** Do NOT trust the silkscreen for SD pins on this board. CLK and CMD are swapped vs the label. Confirmed by exhaustive pin permutation test.
+
 ### Other onboard
 | Function | GPIO |
 |----------|------|
 | WS2812   | 48   |
+| Flash LED | 2   |
 | USB D+   | 19   |
 | USB D-   | 20   |
 | PSRAM    | 35,36,37 (internal — NEVER use externally) |

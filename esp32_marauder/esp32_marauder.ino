@@ -182,10 +182,13 @@ void setup()
   #endif
   
   #ifdef HAS_SD
-    pinMode(SD_CS, OUTPUT);
-    delay(10);
-    digitalWrite(SD_CS, HIGH);
-    delay(10);
+    // CYD_28 uses SDMMC (no CS pin); skip SPI CS init for that board.
+    #ifndef CYD_28
+      pinMode(SD_CS, OUTPUT);
+      delay(10);
+      digitalWrite(SD_CS, HIGH);
+      delay(10);
+    #endif
   #endif
 
   Serial.begin(115200);
